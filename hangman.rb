@@ -30,7 +30,9 @@ class Board
   end
 
   def update(letter)
-    if @used_chars.include? letter
+    if letter.length > 1
+      puts "Enter a single letter"
+    elsif @used_chars.include? letter
       puts "You have already used that character"
     elsif @word.include? letter
       @word.each_with_index do |char, index|
@@ -61,31 +63,41 @@ class Board
 end
 
 class Game
+  require 'yaml'
 
   def play
-    dictionary = load_dictionary
-    word = select_word(dictionary).downcase
-
-    puts "Hello! What's your name?"
-    # player = Player.new(gets.chomp)
-    player = Player.new("Giorgos")
-
-    puts "Hello #{player.name}! Try to guess the word"
-
-    board = Board.new(word)
-    board.draw
-
-    loop do
-      puts "Choose a letter"
-      board.update(gets.chomp.downcase)
-      board.draw
-      break if board.end_game?
+    if File.exist?('save.yaml')
+      puts "Hey there! If you want to load your previous game type (y)"
+      if gets.chomp.downcase == "y"
+        load_game
+      else
+        create_new_game
+      end
+    else
+      create_new_game
     end
 
-    if board.player_found_word?
+    puts "Hello #{@player.name}! Try to guess the word"
+
+    @board.draw
+
+    loop do
+      puts "Choose a letter or 'save' to save and quit"
+      choice = gets.chomp.downcase
+      if choice == "save"
+        save_game
+        break
+      else
+        @board.update(choice)
+        @board.draw
+        break if @board.end_game?
+      end
+    end
+
+    if @board.player_found_word?
       puts "Congratulations you found the word!"
-    elsif board.player_lost?
-      puts "You Failed! The word was #{board.word.join('')}"
+    elsif @board.player_lost?
+      puts "You Failed! The word was #{@board.word.join('')}"
     end
 
     puts "THE END"
@@ -106,6 +118,33 @@ class Game
     end
   end
 
+  def save_game
+    yaml = YAML::dump([@board, @player])
+    file = File.new('save.yaml','w')
+    file.write(yaml)
+    file.close
+  end
+
+  def load_game
+    file = File.new('save.yaml','r')
+    yaml = file.read
+    file.close
+    File.delete('save.yaml')
+    data = YAML::load(yaml)
+    @board = data[0]
+    @player = data[1]
+  end
+
+  def create_new_game
+    dictionary = load_dictionary
+    word = select_word(dictionary).downcase
+    puts word
+
+    puts "Hello! What's your name?"
+    # @player = Player.new(gets.chomp)
+    @player = Player.new("Giorgos")
+    @board = Board.new(word)
+  end
 end
 
 game = Game.new
